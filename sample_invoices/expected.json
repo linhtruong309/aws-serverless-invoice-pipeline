@@ -1,0 +1,270 @@
+{
+  "invoice_01_grid.pdf": {
+    "invoice_no": "AP-000101",
+    "date": "05/10/2026",
+    "vendor": "Công ty TNHH Thực phẩm An Phát",
+    "expected_status": "PARSED",
+    "items": [
+      {
+        "desc": "Gạo ST25 túi 5kg",
+        "unit": "túi",
+        "qty": 20,
+        "unit_price": 145000,
+        "amount": 2900000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Dầu ăn 1L",
+        "unit": "chai",
+        "qty": 36,
+        "unit_price": 52000,
+        "amount": 1872000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Đường tinh luyện 1kg",
+        "unit": "kg",
+        "qty": 50,
+        "unit_price": 24000,
+        "amount": 1200000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Nước mắm 500ml",
+        "unit": "chai",
+        "qty": 24,
+        "unit_price": 38000,
+        "amount": 912000,
+        "vat_rate": 10
+      }
+    ],
+    "subtotal": 6884000,
+    "discount": 0,
+    "vat_by_rate": {
+      "10": 688400
+    },
+    "vat_total": 688400,
+    "grand_total": 7572400
+  },
+  "invoice_02_mixed_vat.pdf": {
+    "invoice_no": "MT-004455",
+    "date": "12/10/2026",
+    "vendor": "Công ty CP Siêu thị Minh Tâm",
+    "expected_status": "PARSED",
+    "items": [
+      {
+        "desc": "Sữa tươi hộp 1L",
+        "unit": "hộp",
+        "qty": 48,
+        "unit_price": 31000,
+        "amount": 1488000,
+        "vat_rate": 8
+      },
+      {
+        "desc": "Bánh quy bơ 400g",
+        "unit": "hộp",
+        "qty": 30,
+        "unit_price": 42000,
+        "amount": 1260000,
+        "vat_rate": 8
+      },
+      {
+        "desc": "Nước rửa chén 750ml",
+        "unit": "chai",
+        "qty": 20,
+        "unit_price": 36000,
+        "amount": 720000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Giấy vệ sinh lốc 10",
+        "unit": "lốc",
+        "qty": 40,
+        "unit_price": 85000,
+        "amount": 3400000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Nước suối 500ml",
+        "unit": "thùng",
+        "qty": 25,
+        "unit_price": 78000,
+        "amount": 1950000,
+        "vat_rate": 8
+      }
+    ],
+    "subtotal": 8818000,
+    "discount": 0,
+    "vat_by_rate": {
+      "8": 375840,
+      "10": 412000
+    },
+    "vat_total": 787840,
+    "grand_total": 9605840
+  },
+  "invoice_03_plain.pdf": {
+    "invoice_no": "HB-2026/0731",
+    "date": "18/10/2026",
+    "vendor": "Công ty CP Vận tải Hòa Bình",
+    "expected_status": "PARSED",
+    "items": [
+      {
+        "desc": "Cước vận chuyển nội thành",
+        "unit": "chuyến",
+        "qty": 12,
+        "unit_price": 850000,
+        "amount": 10200000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Phí bốc xếp",
+        "unit": "lượt",
+        "qty": 12,
+        "unit_price": 150000,
+        "amount": 1800000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Phụ phí chờ hàng",
+        "unit": "giờ",
+        "qty": 5,
+        "unit_price": 120000,
+        "amount": 600000,
+        "vat_rate": 10
+      }
+    ],
+    "subtotal": 12600000,
+    "discount": 0,
+    "vat_by_rate": {
+      "10": 1260000
+    },
+    "vat_total": 1260000,
+    "grand_total": 13860000
+  },
+  "invoice_04_wrapped.pdf": {
+    "invoice_no": "VL-0098213",
+    "date": "22/10/2026",
+    "vendor": "Công ty TNHH Vật liệu Xây dựng Tiến Phát",
+    "expected_status": "PARSED",
+    "items": [
+      {
+        "desc": "Xi măng PCB40 bao 50kg, loại dùng cho xây tô và đổ bê tông",
+        "unit": "bao",
+        "qty": 200,
+        "unit_price": 92000,
+        "amount": 18400000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Thép phi 10 cây dài 11,7m",
+        "unit": "cây",
+        "qty": 80,
+        "unit_price": 148000,
+        "amount": 11840000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Cát xây tô loại 1, xe 4 khối, giao tận công trình",
+        "unit": "xe",
+        "qty": 6,
+        "unit_price": 1200000,
+        "amount": 7200000,
+        "vat_rate": 8
+      },
+      {
+        "desc": "Sơn nước nội thất thùng 18L, màu trắng mờ, chống nấm mốc",
+        "unit": "thùng",
+        "qty": 8,
+        "unit_price": 1650000,
+        "amount": 13200000,
+        "vat_rate": 10
+      }
+    ],
+    "subtotal": 50640000,
+    "discount": 0,
+    "vat_by_rate": {
+      "10": 4344000,
+      "8": 576000
+    },
+    "vat_total": 4920000,
+    "grand_total": 55560000
+  },
+  "invoice_05_english.pdf": {
+    "invoice_no": "OS-77120",
+    "date": "27/10/2026",
+    "vendor": "Sunrise Office Supplies Co., Ltd",
+    "expected_status": "PARSED",
+    "items": [
+      {
+        "desc": "A4 paper ream 80gsm",
+        "unit": "ream",
+        "qty": 100,
+        "unit_price": 68000,
+        "amount": 6800000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Ballpoint pens (box of 20)",
+        "unit": "box",
+        "qty": 30,
+        "unit_price": 45000,
+        "amount": 1350000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Heavy-duty stapler",
+        "unit": "pc",
+        "qty": 10,
+        "unit_price": 85000,
+        "amount": 850000,
+        "vat_rate": 10
+      }
+    ],
+    "subtotal": 9000000,
+    "discount": 450000,
+    "vat_by_rate": {
+      "10": 855000
+    },
+    "vat_total": 855000,
+    "grand_total": 9405000
+  },
+  "invoice_06_wrong_total.pdf": {
+    "invoice_no": "DL-550231",
+    "date": "29/10/2026",
+    "vendor": "Công ty TNHH Điện máy Đại Lợi",
+    "expected_status": "NEEDS_REVIEW",
+    "items": [
+      {
+        "desc": "Quạt đứng công nghiệp",
+        "unit": "cái",
+        "qty": 6,
+        "unit_price": 1350000,
+        "amount": 8100000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Ổ cắm điện 5m",
+        "unit": "cái",
+        "qty": 15,
+        "unit_price": 95000,
+        "amount": 1425000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Bóng đèn LED 12W",
+        "unit": "cái",
+        "qty": 40,
+        "unit_price": 32000,
+        "amount": 1280000,
+        "vat_rate": 10
+      }
+    ],
+    "subtotal": 10805000,
+    "discount": 0,
+    "vat_by_rate": {
+      "10": 1080500
+    },
+    "vat_total": 1080500,
+    "grand_total": 11895500
+  }
+}
