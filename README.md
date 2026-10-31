@@ -1,5 +1,5 @@
 # Serverless Invoice Pipeline (AWS)
-
+![tests](https://github.com/linhtruong309/aws-serverless-invoice-pipeline/actions/workflows/tests.yml/badge.svg)
 An event-driven pipeline that reads PDF invoices, extracts every line item, checks that the
 numbers add up, and stores the result in DynamoDB. Invoices whose numbers do not reconcile are
 flagged `NEEDS_REVIEW` for a human instead of being stored as valid data.
