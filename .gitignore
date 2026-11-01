@@ -3,3 +3,11 @@ __pycache__/
 .venv/
 *.zip
 .DS_Store
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+terraform/build/
+crash.log

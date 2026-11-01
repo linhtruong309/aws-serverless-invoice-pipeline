@@ -1,4 +1,5 @@
 import datetime
+import os
 import urllib.parse
 
 import boto3
@@ -6,7 +7,7 @@ import boto3
 from invoice_parser import parse_invoice
 
 s3 = boto3.client("s3")
-table = boto3.resource("dynamodb").Table("invoices")
+table = boto3.resource("dynamodb").Table(os.environ.get("TABLE_NAME", "invoices"))
 
 
 def lambda_handler(event, context):
