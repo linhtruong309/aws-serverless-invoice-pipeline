@@ -4,7 +4,7 @@ import urllib.parse
 
 import boto3
 
-from invoice_parser import parse_invoice
+from extraction import extract_invoice
 
 s3 = boto3.client("s3")
 table = boto3.resource("dynamodb").Table(os.environ.get("TABLE_NAME", "invoices"))
@@ -17,8 +17,11 @@ def lambda_handler(event, context):
         body = s3.get_object(Bucket=bucket, Key=key)["Body"].read()
 
         try:
-            parsed = parse_invoice(body)
-            status = "PARSED" if not parsed["issues"] else "NEEDS_REVIEW"
+            parsed = extract_invoice(body)
+            # Only a clean, rule-based parse is trusted automatically.
+            # Anything the LLM extracted always goes to a human.
+            clean = parsed["extraction_method"] == "rules" and not parsed["issues"]
+            status = "PARSED" if clean else "NEEDS_REVIEW"
         except Exception as exc:  # unreadable or unexpected PDF
             print(f"ERROR parsing {key}: {exc}")
             parsed, status = {"issues": [f"parser error: {exc}"]}, "FAILED"
@@ -31,5 +34,5 @@ def lambda_handler(event, context):
             **{k: v for k, v in parsed.items() if v is not None},
         }
         table.put_item(Item=item)
-        print(f"Saved {key}: {status} issues={parsed.get('issues')}")
+        print(f"Saved {key}: {status} method={parsed.get('extraction_method')} issues={parsed.get('issues')}")
     return {"status": "ok"}

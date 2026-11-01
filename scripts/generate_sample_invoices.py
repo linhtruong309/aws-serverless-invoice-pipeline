@@ -225,6 +225,35 @@ def layout_english(c, inv, t):
         y -= 16
 
 
+# ---------- Layout 7: unfamiliar "statement of charges" (rules cannot parse it; LLM fallback target) ----------
+def layout_statement(c, inv, t):
+    comma = lambda n: f"{n:,}"  # 1,250,000 (US style, unlike the other layouts)
+    c.setFont("DVB", 13)
+    c.drawString(40, H - 60, inv["vendor"])
+    c.setFont("DV", 9)
+    c.drawString(40, H - 75, inv["addr"])
+    c.setFont("DVB", 16)
+    c.drawString(40, H - 115, "STATEMENT OF CHARGES")
+    c.setFont("DV", 10)
+    c.drawString(40, H - 140, f"Reference: {inv['no']}")
+    c.drawString(40, H - 155, f"Issued on: {inv['date']}")
+    c.drawString(40, H - 170, f"Customer: {inv['customer']}")
+    y = H - 210
+    for n, l in enumerate(t["items"], 1):
+        c.setFont("DVB", 10)
+        c.drawString(40, y, f"{n}) {l['desc']}")
+        c.setFont("DV", 9.5)
+        c.drawString(60, y - 15, f"Quantity: {l['qty']}    Price each: {comma(l['unit_price'])}    Total: {comma(l['amount'])}")
+        y -= 42
+    y -= 10
+    for label, val, bold in [("Net amount", t["subtotal"], False), ("VAT 10%", t["vat_total"], False),
+                             ("Amount payable", t["grand_total"], True)]:
+        c.setFont("DVB" if bold else "DV", 10)
+        c.drawString(330, y, label)
+        c.drawRightString(540, y, comma(val))
+        y -= 18
+
+
 INVOICES = [
     dict(file="invoice_01_grid.pdf", fn=layout_grid, no="AP-000101", date="05/10/2026",
          vendor="Công ty TNHH Thực phẩm An Phát", tax_code="0312345001",
@@ -259,6 +288,11 @@ INVOICES = [
          addr="67 Trường Chinh, Tân Bình, TP. Hồ Chí Minh", customer="Công ty ABC (dữ liệu mẫu)",
          items=[("Quạt đứng công nghiệp", "cái", 6, 1350000, 10), ("Ổ cắm điện 5m", "cái", 15, 95000, 10),
                 ("Bóng đèn LED 12W", "cái", 40, 32000, 10)]),
+    dict(file="invoice_07_unfamiliar_layout.pdf", fn=layout_statement, no="BL-2026-1187", date="30/10/2026", llm=True,
+         vendor="Blue Lotus Furniture Co., Ltd", tax_code="0312345007",
+         addr="15 Hai Ba Trung, District 1, Ho Chi Minh City", customer="ABC Company (sample data)",
+         items=[("Standing desk, oak", "pc", 4, 3200000, 10), ("Ergonomic chair", "pc", 6, 2150000, 10),
+                ("Monitor arm", "pc", 10, 480000, 10)]),
 ]
 
 expected = {}
@@ -273,7 +307,8 @@ for inv in INVOICES:
     c.drawString(40, 30, "DỮ LIỆU MẪU - KHÔNG PHẢI HÓA ĐƠN THẬT / SYNTHETIC SAMPLE, NOT A REAL INVOICE")
     c.save()
     expected[inv["file"]] = dict(invoice_no=inv["no"], date=inv["date"], vendor=inv["vendor"],
-                                 expected_status="NEEDS_REVIEW" if inv.get("tamper") else "PARSED", **t)
+                                 expected_status="NEEDS_REVIEW" if (inv.get("tamper") or inv.get("llm")) else "PARSED",
+                                 **({"needs_llm": True} if inv.get("llm") else {}), **t)
 
 with open(os.path.join(OUT, "expected.json"), "w", encoding="utf-8") as f:
     json.dump(expected, f, ensure_ascii=False, indent=2)

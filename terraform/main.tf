@@ -103,6 +103,14 @@ data "aws_iam_policy_document" "lambda" {
     actions   = ["dynamodb:PutItem"]
     resources = [aws_dynamodb_table.invoices.arn]
   }
+  # LLM fallback: allowed to call exactly one model, through its US cross-region inference profile
+  statement {
+    actions = ["bedrock:InvokeModel"]
+    resources = [
+      "arn:aws:bedrock:${var.region}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.bedrock_inference_profile}",
+      "arn:aws:bedrock:*::foundation-model/${var.bedrock_foundation_model}",
+    ]
+  }
 }
 
 resource "aws_iam_role_policy" "lambda" {
@@ -123,14 +131,15 @@ resource "aws_lambda_function" "parser" {
   handler          = "lambda_function.lambda_handler"
   architectures    = ["x86_64"]
   memory_size      = 512
-  timeout          = 30
+  timeout          = 60
   filename         = data.archive_file.lambda.output_path
   source_code_hash = data.archive_file.lambda.output_base64sha256
   layers           = [data.aws_lambda_layer_version.pdfplumber.arn]
 
   environment {
     variables = {
-      TABLE_NAME = aws_dynamodb_table.invoices.name
+      TABLE_NAME       = aws_dynamodb_table.invoices.name
+      BEDROCK_MODEL_ID = var.bedrock_inference_profile
     }
   }
 

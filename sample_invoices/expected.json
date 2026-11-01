@@ -266,5 +266,45 @@
     },
     "vat_total": 1080500,
     "grand_total": 11895500
+  },
+  "invoice_07_unfamiliar_layout.pdf": {
+    "invoice_no": "BL-2026-1187",
+    "date": "30/10/2026",
+    "vendor": "Blue Lotus Furniture Co., Ltd",
+    "expected_status": "NEEDS_REVIEW",
+    "needs_llm": true,
+    "items": [
+      {
+        "desc": "Standing desk, oak",
+        "unit": "pc",
+        "qty": 4,
+        "unit_price": 3200000,
+        "amount": 12800000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Ergonomic chair",
+        "unit": "pc",
+        "qty": 6,
+        "unit_price": 2150000,
+        "amount": 12900000,
+        "vat_rate": 10
+      },
+      {
+        "desc": "Monitor arm",
+        "unit": "pc",
+        "qty": 10,
+        "unit_price": 480000,
+        "amount": 4800000,
+        "vat_rate": 10
+      }
+    ],
+    "subtotal": 30500000,
+    "discount": 0,
+    "vat_by_rate": {
+      "10": 3050000
+    },
+    "vat_total": 3050000,
+    "grand_total": 33550000
   }
 }
