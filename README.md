@@ -16,6 +16,9 @@ flowchart LR
     C -- parse and validate --> D[(DynamoDB: invoices)]
     C --> E[CloudWatch Logs]
     D -. status NEEDS_REVIEW .-> F[Human review]
+    G[Client] -- GET --> H[API Gateway HTTP API]
+    H --> I[Lambda .NET 10 query API]
+    I -- read only --> D
 ```
 
 | Service | Role |
@@ -25,6 +28,7 @@ flowchart LR
 | DynamoDB | Stores header fields, line items, VAT per rate, status and issues |
 | IAM | Execution role limited to `s3:GetObject` on the bucket and `dynamodb:PutItem` on one table |
 | CloudWatch Logs | Execution logs |
+| API Gateway + Lambda (.NET 10) | Read-only query API: list, look up and summarise invoices |
 
 ## What gets validated
 
@@ -58,7 +62,34 @@ src/lambda_function.py       # Lambda handler: S3 -> parser -> DynamoDB
 tests/                       # pytest golden-file and unit tests
 sample_invoices/             # synthetic PDFs + expected.json
 scripts/generate_sample_invoices.py
+terraform/                   # all AWS resources, including the query API (api.tf)
+dotnet/src/InvoiceApi/       # ASP.NET Core minimal API (C#) that reads the invoices table
+dotnet/tests/InvoiceApi.Tests/  # xUnit + Moq tests
 ```
+
+## Query API (.NET)
+
+A small ASP.NET Core minimal API runs on Lambda behind an API Gateway HTTP API. It only reads
+DynamoDB (`GetItem` and `Scan` on one table), and every route is `GET`.
+
+| Route | Returns |
+|---|---|
+| `GET /invoices?status=needs_review` | Invoices newest first, optionally filtered by status (any casing) |
+| `GET /invoices/{source_key}` | One invoice with line items, VAT per rate and issues (404 if missing) |
+| `GET /summary` | Counts by status and extraction method, money totals, and the keys that need attention |
+| `GET /health` | `{"status": "ok"}` |
+
+Money totals in `/summary` include `PARSED` invoices only, because flagged invoices are not
+trusted until a human has checked them. An unknown status returns a 400 problem response.
+
+The code is layered so each part can be tested on its own:
+
+```
+Program.cs (HTTP endpoints) -> InvoiceService (rules) -> IInvoiceRepository -> DynamoInvoiceRepository
+```
+
+The tests replace `IInvoiceRepository` with a Moq mock, so they need no AWS account. Endpoint
+tests start the real HTTP pipeline in memory with `WebApplicationFactory`.
 
 ## Run the tests locally
 
@@ -71,9 +102,33 @@ pip install -r requirements-dev.txt
 pytest -v
 ```
 
-The suite has 15 tests: golden-file comparison for each sample invoice, unit tests for each
+The suite covers golden-file comparison for each sample invoice, unit tests for each
 validation rule, a non-PDF input test, and a test that runs the real Lambda handler against
 mocked S3 and DynamoDB.
+
+For the .NET API (needs the .NET 10 SDK):
+
+```bash
+cd dotnet
+dotnet test
+```
+
+GitHub Actions runs both suites on every push and pull request.
+
+## Deploying with Terraform
+
+```bash
+# 1. Build the .NET API into dotnet/publish (Terraform zips this folder)
+dotnet publish dotnet/src/InvoiceApi -c Release -r linux-arm64 --self-contained false -o dotnet/publish
+
+# 2. Create or update every resource
+cd terraform
+terraform init
+terraform apply -var="alert_email=you@example.com"
+
+# 3. Try the API
+curl "$(terraform output -raw api_url)summary"
+```
 
 ## Deploying to AWS (manual, console)
 
@@ -103,10 +158,17 @@ mocked S3 and DynamoDB.
   have more variety, which is why unrecognised or inconsistent invoices are flagged rather than trusted.
 - Only text-based PDFs are supported (no OCR for scanned documents).
 - Invoices needing review are flagged in DynamoDB but not yet routed to a separate queue.
+- The query API reads with `Scan`, which is fine for a demo table. A larger table would need a
+  global secondary index on `status` and paginated responses.
+- The API is public with throttling only. Real invoice data would need authentication
+  (for example IAM or a JWT authorizer on API Gateway).
 
 ## Roadmap
 
-- [ ] Infrastructure as code with Terraform
-- [ ] GitHub Actions: run pytest on every push, then deploy
-- [ ] CloudWatch alarm on `FAILED` / `NEEDS_REVIEW`
-- [ ] LLM fallback for unrecognised layouts, with schema validation and human review of its output
+- [x] Infrastructure as code with Terraform
+- [x] GitHub Actions: run pytest on every push
+- [x] CloudWatch alarm on `FAILED` / `NEEDS_REVIEW`
+- [x] LLM fallback for unrecognised layouts, with schema validation and human review of its output
+- [x] Read-only query API in .NET 10 (ASP.NET Core, xUnit, Moq) behind API Gateway
+- [ ] GitHub Actions: deploy on merge to main
+- [ ] Authentication on the query API
