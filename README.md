@@ -175,4 +175,4 @@ curl "$(terraform output -raw api_url)summary"
 - [x] LLM fallback for unrecognised layouts, with schema validation and human review of its output
 - [x] Read-only query API in .NET 10 (ASP.NET Core, xUnit, Moq) behind API Gateway
 - [ ] GitHub Actions: deploy on merge to main
-- [ ] Authentication on the query API
+- [ ] Authentication for non-demo use (IAM or JWT authorizer on API Gateway)
