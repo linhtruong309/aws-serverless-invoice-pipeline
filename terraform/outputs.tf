@@ -15,3 +15,8 @@ output "lambda_name" {
 output "alarm_name" {
   value = aws_cloudwatch_metric_alarm.review.alarm_name
 }
+
+output "api_url" {
+  description = "Base URL of the read-only invoice query API"
+  value       = aws_apigatewayv2_stage.default.invoke_url
+}
