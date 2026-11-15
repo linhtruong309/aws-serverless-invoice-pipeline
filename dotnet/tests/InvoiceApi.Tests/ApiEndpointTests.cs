@@ -35,7 +35,7 @@ public class ApiEndpointTests(WebApplicationFactory<Program> factory) : IClassFi
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
-        Assert.Contains("Invoice checker", await response.Content.ReadAsStringAsync());
+        Assert.Contains("ICheck", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
