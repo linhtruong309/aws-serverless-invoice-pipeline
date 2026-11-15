@@ -26,3 +26,15 @@ variable "bedrock_inference_profile" {
   type        = string
   default     = "us.amazon.nova-2-lite-v1:0"
 }
+
+variable "api_rate_limit" {
+  description = "Steady-state requests per second allowed on the query API"
+  type        = number
+  default     = 5
+}
+
+variable "api_burst_limit" {
+  description = "Short burst of requests allowed on the query API"
+  type        = number
+  default     = 10
+}
