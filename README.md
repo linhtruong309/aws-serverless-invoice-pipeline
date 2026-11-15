@@ -1,5 +1,8 @@
 # Serverless Invoice Pipeline (AWS)
 ![tests](https://github.com/linhtruong309/aws-serverless-invoice-pipeline/actions/workflows/tests.yml/badge.svg)
+
+**Live demo:** https://y2vohpjxx2.execute-api.us-east-2.amazonaws.com/
+
 An event-driven pipeline that reads PDF invoices, extracts every line item, checks that the
 numbers add up, and stores the result in DynamoDB. Invoices whose numbers do not reconcile are
 flagged `NEEDS_REVIEW` for a human instead of being stored as valid data.
@@ -74,6 +77,7 @@ DynamoDB (`GetItem` and `Scan` on one table), and every route is `GET`.
 
 | Route | Returns |
 |---|---|
+| `GET /` | A plain-language page that shows each invoice, its status and the trusted totals |
 | `GET /invoices?status=needs_review` | Invoices newest first, optionally filtered by status (any casing) |
 | `GET /invoices/{source_key}` | One invoice with line items, VAT per rate and issues (404 if missing) |
 | `GET /summary` | Counts by status and extraction method, money totals, and the keys that need attention |
