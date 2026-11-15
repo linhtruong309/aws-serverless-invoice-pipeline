@@ -127,6 +127,7 @@
   table.items th { text-align: left; font-weight: 700; padding: 8px 10px 8px 0; border-bottom: 2px solid var(--ink); white-space: nowrap; }
   table.items td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
   table.items td:first-child { min-width: 9rem; }
+  table.items .orig { font-size: .8rem; color: var(--ink-soft); }
   table.items .num { text-align: right; white-space: nowrap; }
   table.items tfoot td { border-bottom: 0; font-weight: 700; padding-top: 12px; }
 
@@ -216,6 +217,46 @@ const PLAIN = [
   [/^no line items found$/, () => "No item lines could be read from this layout."],
   [/^missing (invoice number|date|subtotal|grand total)$/, m => `The ${m[1]} couldn't be found.`],
 ];
+// The sample invoices follow Vietnamese invoice layouts, so item names are shown in English
+// with the original underneath. Unknown items fall back to the original text.
+const ITEM_EN = {
+  "Gạo ST25 túi 5kg": "ST25 rice, 5 kg bag",
+  "Dầu ăn 1L": "Cooking oil, 1 L",
+  "Đường tinh luyện 1kg": "Refined sugar, 1 kg",
+  "Nước mắm 500ml": "Fish sauce, 500 ml",
+  "Sữa tươi hộp 1L": "Fresh milk, 1 L carton",
+  "Bánh quy bơ 400g": "Butter cookies, 400 g",
+  "Nước rửa chén 750ml": "Dish soap, 750 ml",
+  "Giấy vệ sinh lốc 10": "Toilet paper, pack of 10",
+  "Nước suối 500ml": "Bottled water, 500 ml",
+  "Cước vận chuyển nội thành": "Local delivery fee",
+  "Phí bốc xếp": "Loading fee",
+  "Phụ phí chờ hàng": "Waiting surcharge",
+  "Xi măng PCB40 bao 50kg, loại dùng cho xây tô và đổ bê tông": "PCB40 cement, 50 kg bag, for masonry and concrete",
+  "Thép phi 10 cây dài 11,7m": "10 mm steel rebar, 11.7 m bar",
+  "Cát xây tô loại 1, xe 4 khối, giao tận công trình": "Grade 1 building sand, 4 m³ truckload, delivered to site",
+  "Sơn nước nội thất thùng 18L, màu trắng mờ, chống nấm mốc": "Interior paint, 18 L, matte white, mold-resistant",
+  "Quạt đứng công nghiệp": "Industrial standing fan",
+  "Ổ cắm điện 5m": "Power strip, 5 m",
+  "Bóng đèn LED 12W": "LED bulb, 12 W",
+};
+// The parser keeps the unit column on the end of the name ("... cái"), so strip it before looking up
+const UNITS = ["túi", "chai", "kg", "hộp", "lốc", "thùng", "chuyến", "lượt", "giờ", "bao", "cây", "xe", "cái"];
+function itemName(desc) {
+  const words = desc.trim().split(/\s+/);
+  const base = UNITS.includes(words.at(-1)) && words.length > 1 ? words.slice(0, -1).join(" ") : desc.trim();
+  const en = ITEM_EN[base] ?? ITEM_EN[desc.trim()];
+  return en ? { en, original: base } : { en: desc, original: null };
+}
+
+// "29/10/2026" -> "Oct 29, 2026"
+function niceDate(d) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(d ?? "");
+  if (!m) return d;
+  return new Date(Date.UTC(+m[3], +m[2] - 1, +m[1]))
+    .toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
 function plain(issue) {
   for (const [re, say] of PLAIN) { const m = issue.match(re); if (m) return say(m); }
   return issue;
@@ -305,7 +346,7 @@ function renderDetail(inv) {
   parts.push(el("div", { class: "detail-head" }, [
     el("div", {}, [
       el("h2", { text: inv.invoice_no ?? "Invoice without a number" }),
-      el("div", { class: "meta", text: [inv.date, inv.source_key].filter(Boolean).join("  |  ") }),
+      el("div", { class: "meta", text: [niceDate(inv.date), inv.source_key].filter(Boolean).join("  |  ") }),
     ]),
     stamp(inv.status, true),
   ]));
@@ -322,8 +363,9 @@ function renderDetail(inv) {
   if (inv.line_items.length) {
     const body = el("tbody");
     for (const li of inv.line_items) {
+      const name = itemName(li.desc ?? "");
       body.append(el("tr", {}, [
-        el("td", { text: li.desc ?? "" }),
+        el("td", {}, [el("div", { text: name.en }), name.original && el("div", { class: "orig", lang: "vi", text: name.original })]),
         el("td", { class: "num", text: li.qty ?? "" }),
         el("td", { class: "num", text: li.unit_price != null ? vnd.format(li.unit_price) : "" }),
         el("td", { class: "num", text: li.amount != null ? vnd.format(li.amount) : "" }),
