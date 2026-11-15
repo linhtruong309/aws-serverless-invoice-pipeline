@@ -1,0 +1,7 @@
+# Count these languages in GitHub's language bar
+*.cs   linguist-detectable=true
+*.html linguist-detectable=true
+*.tf   linguist-detectable=true
+
+# Written by `terraform init`, not by hand
+terraform/.terraform.lock.hcl linguist-generated=true
