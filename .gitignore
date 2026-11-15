@@ -11,3 +11,10 @@ __pycache__/
 terraform.tfvars
 terraform/build/
 crash.log
+
+# .NET
+bin/
+obj/
+dotnet/publish/
+*.user
+TestResults/
