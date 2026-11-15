@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invoice checker</title>
+<meta name="description" content="A serverless pipeline that reads PDF invoices, re-checks the math and only trusts invoices that add up.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Public+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --desk: #dfe6ef;
+    --paper: #ffffff;
+    --ink: #17223a;
+    --ink-soft: #56637d;
+    --rule: #c9d3e0;
+    --trusted: #1d7a4c;
+    --review: #c13a2d;
+    --marker: #ffe27a;
+    --display: "Bricolage Grotesque", system-ui, sans-serif;
+    --body: "Public Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--desk);
+    color: var(--ink);
+    font: 400 16px/1.55 var(--body);
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+  header.top { padding: 22px 0 0; font-weight: 700; letter-spacing: .01em; }
+
+  .intro { padding: 56px 0 40px; max-width: 720px; }
+  h1 {
+    font: 800 clamp(2.2rem, 5.2vw, 3.6rem)/1.04 var(--display);
+    letter-spacing: -0.02em;
+    margin: 0 0 20px;
+  }
+  .intro p { font-size: 1.125rem; color: var(--ink-soft); margin: 0; max-width: 60ch; }
+
+  /* The stack of invoices: the one memorable element */
+  .slips {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 14px;
+    padding: 8px 0 56px;
+  }
+  .slip {
+    position: relative;
+    display: flex; flex-direction: column; justify-content: space-between;
+    min-height: 176px;
+    padding: 14px 14px 12px;
+    background: var(--paper);
+    border: 0;
+    border-radius: 3px;
+    box-shadow: 0 1px 0 var(--rule), 0 10px 22px -16px rgba(23,34,58,.5);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transform: rotate(var(--tilt, 0deg));
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .slip:hover, .slip[aria-pressed="true"] {
+    transform: rotate(0deg) translateY(-4px);
+    box-shadow: 0 1px 0 var(--rule), 0 18px 28px -18px rgba(23,34,58,.6);
+  }
+  .slip[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 0; }
+  .slip .lines { display: grid; gap: 6px; margin: 6px 0 14px; }
+  .slip .lines i { display: block; height: 4px; border-radius: 2px; background: var(--rule); }
+  .slip .lines i:nth-child(2) { width: 82%; }
+  .slip .lines i:nth-child(3) { width: 64%; }
+  .slip .no { font-weight: 700; font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slip .amount { font-size: .85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .slip .stamp { white-space: nowrap; }
+
+  .stamp {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 3px 8px 2px;
+    border: 2.5px solid currentColor;
+    border-radius: 4px;
+    font: 800 .78rem/1.2 var(--display);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    transform: rotate(-6deg);
+    mix-blend-mode: multiply;
+  }
+  .stamp.trusted { color: var(--trusted); }
+  .stamp.review, .stamp.failed { color: var(--review); }
+  .stamp.big { font-size: 1.05rem; padding: 5px 12px 4px; border-width: 3px; }
+
+  /* Shared paper panels */
+  .paper {
+    background: var(--paper);
+    border-radius: 4px;
+    box-shadow: 0 1px 0 var(--rule), 0 14px 30px -22px rgba(23,34,58,.55);
+    padding: 32px;
+  }
+  h2 { font: 800 1.6rem/1.15 var(--display); letter-spacing: -0.01em; margin: 0 0 6px; }
+  .lede { color: var(--ink-soft); margin: 0 0 24px; }
+
+  .grid-2 { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: start; padding-bottom: 64px; }
+
+  /* The trusted money, written out as a sum */
+  .sum { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .sum td { padding: 7px 0; border-bottom: 1px solid var(--rule); }
+  .sum td:last-child { text-align: right; white-space: nowrap; }
+  .sum tr.total td { border-bottom: 0; border-top: 2px solid var(--ink); padding-top: 12px; font-weight: 700; font-size: 1.2rem; }
+  .left-out { margin: 20px 0 0; font-size: .95rem; color: var(--ink-soft); }
+
+  /* Detail of one invoice */
+  .detail-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 18px; }
+  .detail-head .meta { color: var(--ink-soft); font-size: .95rem; }
+  .why { background: #fdf0ee; border-left: 4px solid var(--review); padding: 12px 16px; margin: 0 0 20px; border-radius: 0 4px 4px 0; }
+  .why strong { display: block; margin-bottom: 4px; }
+  .why ul { margin: 0; padding-left: 18px; }
+  .ok { background: #ecf6f0; border-left: 4px solid var(--trusted); padding: 12px 16px; margin: 0 0 20px; border-radius: 0 4px 4px 0; }
+  mark { background: var(--marker); padding: 0 2px; }
+  .table-scroll { overflow-x: auto; }
+  table.items { width: 100%; border-collapse: collapse; font-size: .92rem; font-variant-numeric: tabular-nums; }
+  table.items th { text-align: left; font-weight: 700; padding: 8px 10px 8px 0; border-bottom: 2px solid var(--ink); white-space: nowrap; }
+  table.items td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  table.items td:first-child { min-width: 9rem; }
+  table.items .num { text-align: right; white-space: nowrap; }
+  table.items tfoot td { border-bottom: 0; font-weight: 700; padding-top: 12px; }
+
+  footer { padding: 0 0 56px; color: var(--ink-soft); font-size: .95rem; }
+  footer .dev { border-top: 1px solid var(--rule); padding-top: 20px; }
+  footer code { font-size: .88rem; }
+
+  .status-msg { padding: 24px 0 56px; color: var(--ink-soft); }
+
+  @media (max-width: 960px) {
+    .slips { grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (max-width: 820px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .paper { padding: 22px; }
+    .intro { padding-top: 36px; }
+  }
+  @media (max-width: 520px) {
+    .slips { grid-template-columns: repeat(2, 1fr); gap: 12px; padding-bottom: 40px; }
+    .slip { min-height: 128px; }
+    .slip .lines { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .slip { transition: none; transform: none; }
+    .slip:hover, .slip[aria-pressed="true"] { transform: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">Invoice checker</header>
+
+  <section class="intro">
+    <h1>Every invoice gets its math checked before you trust it.</h1>
+    <p>Drop a PDF invoice into the pipeline and it reads every line, adds it all up again and checks the VAT.
+      Invoices that add up are trusted. Anything that doesn't goes to a person.
+      Here is what it found in <span id="count">the sample</span> invoices. They are made up for this demo.</p>
+  </section>
+
+  <p class="status-msg" id="status" role="status">Loading the invoices. The first visit can take a few seconds while the server wakes up.</p>
+
+  <section aria-label="Invoices" class="slips" id="slips" hidden></section>
+
+  <div class="grid-2" id="panels" hidden>
+    <section class="paper" aria-labelledby="money-h">
+      <h2 id="money-h">Money you can rely on</h2>
+      <p class="lede">Only the trusted invoices are added up, so one wrong number never sneaks into your totals.</p>
+      <table class="sum" id="sum"></table>
+      <p class="left-out" id="left-out"></p>
+    </section>
+
+    <section class="paper" aria-live="polite" id="detail">
+      <p class="lede">Pick an invoice above to see what is inside it.</p>
+    </section>
+  </div>
+
+  <footer>
+    <div class="dev">
+      For developers: this page reads a read-only .NET API on AWS Lambda.
+      Raw data: <a href="summary"><code>/summary</code></a>, <a href="invoices"><code>/invoices</code></a>.
+      Source on <a href="https://github.com/linhtruong309/aws-serverless-invoice-pipeline">GitHub</a>.
+    </div>
+  </footer>
+</div>
+
+<script>
+const vnd = new Intl.NumberFormat("en-US");
+const money = n => vnd.format(n ?? 0) + " ₫";
+// short = the stamp on a small slip, text = the stamp on the open invoice
+const STAMP = {
+  PARSED: { cls: "trusted", short: "Trusted", text: "Trusted" },
+  NEEDS_REVIEW: { cls: "review", short: "Review", text: "Needs review" },
+  FAILED: { cls: "failed", short: "Unread", text: "Unreadable" },
+};
+
+// Turn the checker's technical messages into plain sentences
+const n = v => money(Number(v));
+const PLAIN = [
+  [/^subtotal - discount \+ VAT = (\d+) != grand total (\d+)$/,
+    m => `Items minus discount plus VAT come to ${n(m[1])}, but the invoice asks for ${n(m[2])}.`],
+  [/^sum of lines (\d+) != subtotal (\d+)$/,
+    m => `The item lines add up to ${n(m[1])}, but the subtotal says ${n(m[2])}.`],
+  [/^line (\d+): qty x unit price does not equal amount$/,
+    m => `On line ${m[1]}, quantity times unit price doesn't match the amount.`],
+  [/^VAT (\d+)%: expected about (\d+), found (\d+)$/,
+    m => `VAT at ${m[1]}% should be about ${n(m[2])}, but the invoice shows ${n(m[3])}.`],
+  [/^no line items found$/, () => "No item lines could be read from this layout."],
+  [/^missing (invoice number|date|subtotal|grand total)$/, m => `The ${m[1]} couldn't be found.`],
+];
+function plain(issue) {
+  for (const [re, say] of PLAIN) { const m = issue.match(re); if (m) return say(m); }
+  return issue;
+}
+
+// Small helper so data from the API is always inserted as text, never as HTML
+function el(tag, props = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") node.className = v;
+    else if (k === "text") node.textContent = v;
+    else node.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) if (c) node.append(c);
+  return node;
+}
+
+function stamp(status, big = false) {
+  const s = STAMP[status] ?? STAMP.FAILED;
+  return el("span", { class: `stamp ${s.cls}${big ? " big" : ""}`, text: big ? s.text : s.short });
+}
+
+async function getJson(path) {
+  const res = await fetch(path, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error(`${path} returned ${res.status}`);
+  return res.json();
+}
+
+function renderSlips(items) {
+  const box = document.getElementById("slips");
+  // Oldest first reads like a pile of paper being worked through
+  const ordered = [...items].sort((a, b) => a.source_key.localeCompare(b.source_key));
+  ordered.forEach((inv, i) => {
+    const tilt = [-1.6, 1.2, -0.6, 1.8, -1.2, 0.8, -1.9, 1.4][i % 8];
+    const btn = el("button", {
+      class: "slip", type: "button", "aria-pressed": "false",
+      style: `--tilt:${tilt}deg`,
+      "aria-label": `${inv.invoice_no ?? inv.source_key}, ${STAMP[inv.status]?.text ?? inv.status}`,
+    }, [
+      el("div", {}, [
+        el("div", { class: "no", text: inv.invoice_no ?? "No number" }),
+        el("div", { class: "lines" }, [el("i"), el("i"), el("i")]),
+        el("div", { class: "amount", text: inv.grand_total != null ? money(inv.grand_total) : "—" }),
+      ]),
+      stamp(inv.status),
+    ]);
+    btn.addEventListener("click", () => select(inv.source_key, btn));
+    btn.dataset.key = inv.source_key;
+    box.append(btn);
+  });
+  box.hidden = false;
+}
+
+function renderSum(summary) {
+  const t = summary.parsed_totals;
+  const rows = [["Goods, before tax", money(t.subtotal)]];
+  if (t.discount) rows.push(["Discounts", "− " + money(t.discount)]);
+  for (const [rate, amount] of Object.entries(t.vat_by_rate)) rows.push([`VAT at ${rate}%`, "+ " + money(amount)]);
+
+  const table = document.getElementById("sum");
+  for (const [label, value] of rows) table.append(el("tr", {}, [el("td", { text: label }), el("td", { text: value })]));
+  table.append(el("tr", { class: "total" }, [
+    el("td", { text: `Total from ${t.invoice_count} trusted invoices` }),
+    el("td", { text: money(t.grand_total) }),
+  ]));
+
+  const flagged = summary.needs_attention.length;
+  document.getElementById("left-out").textContent = flagged
+    ? `${flagged} invoice${flagged > 1 ? "s are" : " is"} left out until someone checks ${flagged > 1 ? "them" : "it"}.`
+    : "Every invoice added up, so nothing was left out.";
+}
+
+async function select(key, btn) {
+  document.querySelectorAll(".slip").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+  const panel = document.getElementById("detail");
+  panel.replaceChildren(el("p", { class: "lede", text: "Opening the invoice…" }));
+  try {
+    const inv = await getJson("invoices/" + encodeURIComponent(key));
+    panel.replaceChildren(...renderDetail(inv));
+  } catch {
+    panel.replaceChildren(el("p", { class: "lede", text: "This invoice couldn't be opened. Pick it again to retry." }));
+  }
+}
+
+function renderDetail(inv) {
+  const parts = [];
+  parts.push(el("div", { class: "detail-head" }, [
+    el("div", {}, [
+      el("h2", { text: inv.invoice_no ?? "Invoice without a number" }),
+      el("div", { class: "meta", text: [inv.date, inv.source_key].filter(Boolean).join("  |  ") }),
+    ]),
+    stamp(inv.status, true),
+  ]));
+
+  if (inv.status === "PARSED") {
+    parts.push(el("div", { class: "ok", text: "Every line, the VAT and the total add up, so this invoice is trusted." }));
+  } else {
+    const list = el("ul");
+    for (const issue of inv.issues) list.append(el("li", { text: plain(issue) }));
+    if (!inv.issues.length) list.append(el("li", { text: "Read by the AI fallback, so a person confirms it first." }));
+    parts.push(el("div", { class: "why" }, [el("strong", { text: "Why a person needs to look at it" }), list]));
+  }
+
+  if (inv.line_items.length) {
+    const body = el("tbody");
+    for (const li of inv.line_items) {
+      body.append(el("tr", {}, [
+        el("td", { text: li.desc ?? "" }),
+        el("td", { class: "num", text: li.qty ?? "" }),
+        el("td", { class: "num", text: li.unit_price != null ? vnd.format(li.unit_price) : "" }),
+        el("td", { class: "num", text: li.amount != null ? vnd.format(li.amount) : "" }),
+        el("td", { class: "num", text: li.vat_rate != null ? li.vat_rate + "%" : "" }),
+      ]));
+    }
+    const totalCell = el("td", { class: "num" });
+    // Highlight the printed total when the checker says it is wrong
+    const wrongTotal = inv.issues.some(i => i.includes("grand total"));
+    totalCell.append(wrongTotal ? el("mark", { text: money(inv.grand_total) }) : money(inv.grand_total));
+    const foot = el("tfoot", {}, [el("tr", {}, [
+      el("td", { colspan: "3", text: "Total printed on the invoice" }), totalCell, el("td"),
+    ])]);
+    parts.push(el("div", { class: "table-scroll" }, [el("table", { class: "items" }, [
+      el("thead", {}, [el("tr", {}, [
+        el("th", { text: "Item" }), el("th", { class: "num", text: "Qty" }),
+        el("th", { class: "num", text: "Unit price" }), el("th", { class: "num", text: "Amount" }),
+        el("th", { class: "num", text: "VAT" }),
+      ])]),
+      body, foot,
+    ])]));
+  }
+  return parts;
+}
+
+(async () => {
+  const status = document.getElementById("status");
+  try {
+    const [summary, list] = await Promise.all([getJson("summary"), getJson("invoices")]);
+    document.getElementById("count").textContent = `the ${summary.total_invoices} sample`;
+    renderSlips(list.items);
+    renderSum(summary);
+    document.getElementById("panels").hidden = false;
+    status.remove();
+    // Open the first flagged invoice, since that is the interesting part
+    const first = summary.needs_attention[0] ?? list.items[0]?.source_key;
+    const btn = first && document.querySelector(`.slip[data-key="${CSS.escape(first)}"]`);
+    if (btn) select(first, btn);
+  } catch {
+    status.textContent = "The invoices couldn't be loaded. Refresh the page to try again.";
+  }
+})();
+</script>
+</body>
+</html>

@@ -29,6 +29,16 @@ public class ApiEndpointTests(WebApplicationFactory<Program> factory) : IClassFi
     }
 
     [Fact]
+    public async Task Root_serves_the_demo_page()
+    {
+        var response = await CreateClient().GetAsync("/");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+        Assert.Contains("Invoice checker", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task Invoices_endpoint_returns_snake_case_json()
     {
         _repo.Setup(r => r.ListAsync(null, It.IsAny<CancellationToken>()))

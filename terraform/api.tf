@@ -75,6 +75,7 @@ resource "aws_apigatewayv2_integration" "api" {
 # Only GET routes exist, so the API cannot be used to change data
 resource "aws_apigatewayv2_route" "api" {
   for_each = toset([
+    "GET /",
     "GET /health",
     "GET /invoices",
     "GET /invoices/{proxy+}",

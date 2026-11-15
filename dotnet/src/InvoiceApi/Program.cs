@@ -22,6 +22,10 @@ builder.Services.AddProblemDetails();
 var app = builder.Build();
 app.UseExceptionHandler();
 
+// "/" serves wwwroot/index.html: a plain-language page that reads the API below
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 app.MapGet("/invoices", async (string? status, InvoiceService service, CancellationToken ct) =>
